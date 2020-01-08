@@ -1,3 +1,16 @@
+#! /usr/bin/env python
+# -*- coding: utf-8 -*-
+#
+# Copyright © 2017 bily     Huazhong University of Science and Technology
+#
+# Distributed under terms of the MIT license.
+
+"""Model Wrapper class for performing inference with a SiameseModel"""
+
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 import functools
 import logging
 import os
@@ -7,10 +20,8 @@ import numpy as np
 import tensorflow as tf
 
 from embeddings.convolutional_alexnet import convolutional_alexnet_arg_scope, convolutional_alexnet
-from embeddings.attention_module import attach_attention_module
 from utils.infer_utils import get_exemplar_images
 from utils.misc_utils import get_center
-from matting.matting_biulder import matting_select
 
 slim = tf.contrib.slim
 
@@ -20,19 +31,14 @@ class InferenceWrapper():
 
   def __init__(self):
     self.image = None
-    self.matting = None
     self.target_bbox_feed = None
     self.search_images = None
     self.embeds = None
-    self.original_feature = None
-    self.matting_feature = None
     self.templates = None
     self.init = None
     self.model_config = None
     self.track_config = None
     self.response_up = None
-    self.is_matted = True
-    self.search_matting = None
 
   def build_graph_from_config(self, model_config, track_config, checkpoint_path):
     """Build the inference graph and return a restore function."""
@@ -77,13 +83,6 @@ class InferenceWrapper():
     image = tf.image.decode_jpeg(image_file, channels=3, dct_method="INTEGER_ACCURATE")
     image = tf.to_float(image)
     self.image = image
-
-    matted_filename = tf.placeholder(tf.string, [], name='matted_filename')
-    matting_file = tf.read_file(matted_filename)
-    matting = tf.image.decode_jpeg(matting_file, channels=3, dct_method="INTEGER_ACCURATE")
-    matting = tf.to_float(matting)
-    self.matting = matting
-
     self.target_bbox_feed = tf.placeholder(dtype=tf.float32,
                                            shape=[4],
                                            name='target_bbox_feed')  # center's y, x, height, width
@@ -141,19 +140,13 @@ class InferenceWrapper():
     # Note we use different padding values for each image
     # while the original implementation uses only the average value
     # of the first image for all images.
-    matting_dims = tf.expand_dims(self.matting, 0)
-    matting_cropped = tf.image.crop_and_resize(matting_dims, boxes,
-                                             box_ind=tf.zeros((track_config['num_scales']), tf.int32),
-                                             crop_size=[size_x, size_x])
-    self.search_matting = matting_cropped
-
     image_minus_avg = tf.expand_dims(self.image - avg_chan, 0)
     image_cropped = tf.image.crop_and_resize(image_minus_avg, boxes,
                                              box_ind=tf.zeros((track_config['num_scales']), tf.int32),
                                              crop_size=[size_x, size_x])
     self.search_images = image_cropped + avg_chan
 
-  def get_image_embedding(self, images, reuse=True):
+  def get_image_embedding(self, images, reuse=None):
     config = self.model_config['embed_config']
     arg_scope = convolutional_alexnet_arg_scope(config,
                                                 trainable=config['train_embedding'],
@@ -168,34 +161,17 @@ class InferenceWrapper():
 
     return embed
 
-  def build_matting_feature(self):
-    # Exemplar image lies at the center of the search image in the first frame
-    matted_exemplar_images = get_exemplar_images(self.search_matting, [self.model_config['z_image_size'],
-                                                               self.model_config['z_image_size']])
-    templates = self.get_image_embedding(matted_exemplar_images, reuse=tf.AUTO_REUSE)
-    # templates = attach_attention_module(templates, attention_module='se_block')
-    center_scale = int(get_center(self.track_config['num_scales']))
-    center_template = tf.identity(templates[center_scale])
-    matting_feature = tf.stack([center_template for _ in range(self.track_config['num_scales'])])
-    self.matting_feature = matting_feature
-    return matting_feature
-
-  def build_original_featrue(self):
-    # Exemplar image lies at the center of the search image in the first frame
-    exemplar_images = get_exemplar_images(self.search_images, [self.model_config['z_image_size'],
-                                                               self.model_config['z_image_size']])
-    templates = self.get_image_embedding(exemplar_images, reuse=tf.AUTO_REUSE)
-    # templates = attach_attention_module(templates, attention_module='se_block')
-    center_scale = int(get_center(self.track_config['num_scales']))
-    center_template = tf.identity(templates[center_scale])
-    original_feature = tf.stack([center_template for _ in range(self.track_config['num_scales'])])
-    self.original_feature = original_feature
-    return original_feature
-
   def build_template(self):
-    matting_feature = self.build_matting_feature()
-    original_feature = self.build_original_featrue()
-    templates = 0.3*matting_feature + 0.7*original_feature
+    model_config = self.model_config
+    track_config = self.track_config
+
+    # Exemplar image lies at the center of the search image in the first frame
+    exemplar_images = get_exemplar_images(self.search_images, [model_config['z_image_size'],
+                                                               model_config['z_image_size']])
+    templates = self.get_image_embedding(exemplar_images)
+    center_scale = int(get_center(track_config['num_scales']))
+    center_template = tf.identity(templates[center_scale])
+    templates = tf.stack([center_template for _ in range(track_config['num_scales'])])
 
     with tf.variable_scope('target_template'):
       # Store template in Variable such that we don't have to feed this template every time.
@@ -244,13 +220,11 @@ class InferenceWrapper():
       response_up = tf.squeeze(response_up, [3])
       self.response_up = response_up
 
-  def initialize(self, sess, input_feed, matting_method, logdir):
+  def initialize(self, sess, input_feed):
     image_path, target_bbox = input_feed
-    matted_path = matting_select(image_path, target_bbox, matting_method, logdir)
     scale_xs, _ = sess.run([self.scale_xs, self.init],
                            feed_dict={'filename:0': image_path,
-                                      'matted_filename:0': matted_path,
-                                      "target_bbox_feed:0": target_bbox})
+                                      "target_bbox_feed:0": target_bbox, })
     return scale_xs
 
   def inference_step(self, sess, input_feed):
