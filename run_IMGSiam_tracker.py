@@ -17,7 +17,7 @@ from utils.infer_utils import Rectangle
 from utils.misc_utils import auto_select_gpu, mkdir_p, sort_nicely, load_cfgs
 from scripts.show_tracking import visualization
 
-CHECKPOINT = ROOT_DIR + '/Logs/SiamFC/track_model_checkpoints/SiamFC-3s-color-pretrained'
+CHECKPOINT = ROOT_DIR + '/Logs/SiamAtt/track_model_checkpoints/IMGSiam-3s-color'
 VIDEO_DIR = ROOT_DIR + '/assets/Boy'
 
 def main(checkpoint, video_dir):
