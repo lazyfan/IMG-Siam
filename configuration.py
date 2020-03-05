@@ -86,6 +86,7 @@ TRACK_CONFIG = {
 
   # Configurations for matting
   'matting': 'sbbm',
+  'featrue_weight': 0.3,
 
   # Configurations for upsampling score maps
   'upsample_method': 'bicubic',
