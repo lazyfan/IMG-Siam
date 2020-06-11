@@ -22,11 +22,10 @@ def se_block(input_feature, name, ratio=8):
   """Contains the implementation of Squeeze-and-Excitation(SE) block.
   As described in https://arxiv.org/abs/1709.01507.
   """
-
   kernel_initializer = tf.contrib.layers.variance_scaling_initializer()
   bias_initializer = tf.constant_initializer(value=0.0)
 
-  with tf.variable_scope(name):
+  with tf.variable_scope(name, reuse=tf.AUTO_REUSE)as scope:
     channel = input_feature.get_shape()[-1]
     # Global average pooling
     squeeze = tf.reduce_mean(input_feature, axis=[1,2], keepdims=True)

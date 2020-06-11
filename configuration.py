@@ -1,8 +1,8 @@
 import os.path as osp
 
 CURRENT_DIR = osp.dirname(__file__)
-LOG_DIR = CURRENT_DIR + '/Logs/SiamAtt'  # where checkpoints, logs are saved
-RUN_NAME = 'IMGSiam-3s-color'  # identifier of the experiment
+LOG_DIR = CURRENT_DIR + '\Logs'  # where checkpoints, logs are saved
+RUN_NAME = 'SiamFC-3s-color-pretrained'  # identifier of the experiment
 
 MODEL_CONFIG = {
   'z_image_size': 127,  # Exemplar image size
@@ -26,7 +26,7 @@ MODEL_CONFIG = {
 }
 
 TRAIN_CONFIG = {
-  'train_dir': osp.join(LOG_DIR, 'track_model_checkpoints', RUN_NAME),
+  'train_dir': osp.join(LOG_DIR, 'model_checkpoints', RUN_NAME),
 
   'seed': 123,  # fix seed for reproducing experiments
 

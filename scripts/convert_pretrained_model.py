@@ -6,8 +6,6 @@ import sys
 import numpy as np
 import tensorflow as tf
 
-CURRENT_DIR = osp.dirname(__file__)
-sys.path.append(osp.join(CURRENT_DIR, '..'))
 
 import configuration
 from model import siamese_model
@@ -17,21 +15,11 @@ from utils.misc_utils import auto_select_gpu, save_cfgs
 os.environ['CUDA_VISIBLE_DEVICES'] = auto_select_gpu()
 tf.logging.set_verbosity(tf.logging.DEBUG)
 
-from sacred import Experiment
-
-ex = Experiment(configuration.RUN_NAME)
-
-
-@ex.config
-def configurations():
-  # Add configurations for current script, for more details please see the documentation of `sacred`.
-  model_config = configuration.MODEL_CONFIG
-  train_config = configuration.TRAIN_CONFIG
-  track_config = configuration.TRACK_CONFIG
+RUN_NAME = 'SiamFC-3s-pretrained'
+PRETRAINED_MAT_MODEL_FILE = osp.join(configuration.CURRENT_DIR, 'assets/2016-08-17.net.mat')
 
 
-@ex.automain
-def main(model_config, train_config, track_config):
+def _main(model_config, train_config, track_config):
   # Create training directory
   train_dir = train_config['train_dir']
   if not tf.gfile.IsDirectory(train_dir):
@@ -81,3 +69,12 @@ def main(model_config, train_config, track_config):
 
     checkpoint_path = osp.join(train_config['train_dir'], 'model.ckpt')
     saver.save(sess, checkpoint_path, global_step=start_step)
+
+if __name__ == '__main__':
+  model_config = configuration.MODEL_CONFIG
+  train_config = configuration.TRAIN_CONFIG
+  track_config = configuration.TRACK_CONFIG
+
+  model_config['embed_config']['embedding_checkpoint_file'] = PRETRAINED_MAT_MODEL_FILE
+  _main(model_config, train_config, track_config)
+

@@ -18,7 +18,7 @@ pip install tensorflow-gpu  # For GPU
 pip install sacred, scipy, opencv-python
 
 # Matting needs
-pip install sklearn, vlfeat-ctypes
+pip install scikit-image, scikit-learn, vlfeat-ctypes
 
 # (OPTIONAL) Install nvidia-ml-py for automatically selecting GPU
 pip install nvidia-ml-py

@@ -9,13 +9,10 @@ from __future__ import division
 from __future__ import print_function
 
 import logging
-
 import tensorflow as tf
-
 from utils.misc_utils import get
 
 slim = tf.contrib.slim
-
 
 def convolutional_alexnet_arg_scope(embed_config,
                                     trainable=True,

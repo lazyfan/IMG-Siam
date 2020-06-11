@@ -24,8 +24,8 @@ class InferenceWrapper():
     self.target_bbox_feed = None
     self.search_images = None
     self.embeds = None
-    self.original_feature = None
-    self.matting_feature = None
+    # self.original_feature = None
+    # self.matting_feature = None
     self.templates = None
     self.init = None
     self.model_config = None
@@ -169,33 +169,21 @@ class InferenceWrapper():
 
     return embed
 
-  def build_matting_feature(self):
+  def build_exemplar_featrue(self, exemplar_input):
     # Exemplar image lies at the center of the search image in the first frame
-    matted_exemplar_images = get_exemplar_images(self.search_matting, [self.model_config['z_image_size'],
-                                                               self.model_config['z_image_size']])
-    templates = self.get_image_embedding(matted_exemplar_images, reuse=tf.AUTO_REUSE)
-    templates = attach_attention_module(templates, attention_module='se_block')
-    center_scale = int(get_center(self.track_config['num_scales']))
-    center_template = tf.identity(templates[center_scale])
-    matting_feature = tf.stack([center_template for _ in range(self.track_config['num_scales'])])
-    self.matting_feature = matting_feature
-    return matting_feature
-
-  def build_original_featrue(self):
-    # Exemplar image lies at the center of the search image in the first frame
-    exemplar_images = get_exemplar_images(self.search_images, [self.model_config['z_image_size'],
+    exemplar_images = get_exemplar_images(exemplar_input, [self.model_config['z_image_size'],
                                                                self.model_config['z_image_size']])
     templates = self.get_image_embedding(exemplar_images, reuse=tf.AUTO_REUSE)
-    templates = attach_attention_module(templates, attention_module='se_block')
+    # templates = attach_attention_module(templates, attention_module='se_block')
     center_scale = int(get_center(self.track_config['num_scales']))
     center_template = tf.identity(templates[center_scale])
-    original_feature = tf.stack([center_template for _ in range(self.track_config['num_scales'])])
-    self.original_feature = original_feature
-    return original_feature
+    exemplar_feature = tf.stack([center_template for _ in range(self.track_config['num_scales'])])
+
+    return exemplar_feature
 
   def build_template(self):
-    matting_feature = self.build_matting_feature()
-    original_feature = self.build_original_featrue()
+    original_feature, matting_feature = list(map(lambda exemplar_input: self.build_exemplar_featrue(exemplar_input),
+                                                 [self.search_images, self.search_matting]))
     templates = self.feature_weight * matting_feature + (1 - self.feature_weight) * original_feature
 
     with tf.variable_scope('target_template'):

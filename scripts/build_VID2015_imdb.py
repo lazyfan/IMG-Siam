@@ -28,8 +28,8 @@ from utils.misc_utils import sort_nicely
 class Config:
   ### Dataset
   # directory where curated dataset is stored
-  dataset_dir = 'data/ILSVRC2015-VID-Curation'
-  save_dir = 'data/'
+  dataset_dir = '/ILSVRC2015_VID/ILSVRC2015-VID-Curation'
+  save_dir = './data/'
 
   # percentage of all videos for validation
   validation_ratio = 0.1
@@ -100,13 +100,14 @@ class Dataset:
     for dir_ in train_dirs:
       train_sub_dir = os.path.join(ann_dir, 'train', dir_)
       video_names = os.listdir(train_sub_dir)
-      train_video_dirs = [os.path.join(train_sub_dir, name) for name in video_names]
-      all_video_dirs = all_video_dirs + train_video_dirs
+      if video_names:
+        train_video_dirs = [os.path.join(train_sub_dir, name) for name in video_names]
+        all_video_dirs = all_video_dirs + train_video_dirs
 
     return all_video_dirs
 
 
-def main():
+def _main():
   # Get the data.
   config = Config()
   dataset = Dataset(config)
@@ -142,4 +143,4 @@ def main():
 
 
 if __name__ == '__main__':
-  main()
+  _main()

@@ -89,11 +89,12 @@ def main(model_config, train_config, track_config):
     tf.summary.scalar('learning_rate', learning_rate)
 
     # Freeze the first three layers
-    # vars1 = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='convolutional_alexnet/conv4')
-    # vars2 = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='convolutional_alexnet/conv5')
-    # vars3 = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='attention')
-    # train_vars = vars1 + vars2 + vars3
-    train_vars = None
+    # Train the last two layers
+    vars1 = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='convolutional_alexnet/conv4')
+    vars2 = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='convolutional_alexnet/conv5')
+    vars3 = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='attention')
+    train_vars = vars1 + vars2 + vars3
+    # train_vars = None
 
     # Set up the training ops
     opt_op = tf.contrib.layers.optimize_loss(
