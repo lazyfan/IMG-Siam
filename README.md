@@ -38,7 +38,7 @@ In the initialization phase of the tracker, matting is performed on the initial 
 
 ### Run the tracker on the specified sequence
 
-You can place the sequence you want to track in the `assets`, where the sequence *Boy* is placed for reference.
+You can place the sequence you want to track in the `assets`, where the sequence *video* is placed for reference.
 
 (OPTIONAL) There are three matting programs available: sbbm, lbdm, ocsvm, you can modify it in `configuration.py`
 
