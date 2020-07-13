@@ -15,12 +15,13 @@ from inference import inference_wrapper
 from inference.tracker import Tracker
 from utils.infer_utils import Rectangle
 from utils.misc_utils import auto_select_gpu, mkdir_p, sort_nicely, load_cfgs
-from scripts.show_tracking import visualization
+from scripts.show_tracking_result import visualization
 
-CHECKPOINT = ROOT_DIR + '/Logs/SiamAtt/track_model_checkpoints/IMGSiam-3s-color'
-VIDEO_DIR = ROOT_DIR + '/assets/Boy'
+CHECKPOINT = ROOT_DIR + '/Logs/model_checkpoints/IMG-Siam'  # IMGSiam-3s-color
+VIDEO_FILE = ROOT_DIR + '/assets/video'
+# VIDEO_FILE = ROOT_DIR + '/assets/video.mp4'
 
-def main(checkpoint, video_dir):
+def main(checkpoint, video_file):
   os.environ['CUDA_VISIBLE_DEVICES'] = auto_select_gpu()
 
   if 'model_config.json' in os.listdir(CHECKPOINT) and 'track_config.json' in os.listdir(CHECKPOINT):
@@ -28,7 +29,8 @@ def main(checkpoint, video_dir):
   else:
     model_config = configuration.MODEL_CONFIG
     track_config = configuration.TRACK_CONFIG
-  track_config['log_level'] = 1
+  if track_config['visualization']:
+    track_config['log_level'] = 1
 
   g = tf.Graph()
   with g.as_default():
@@ -40,7 +42,7 @@ def main(checkpoint, video_dir):
     logging.info('Creating inference directory: %s', track_config['log_dir'])
     mkdir_p(track_config['log_dir'])
 
-  logging.info("Running tracking on %d videos matching %s", len(video_dir), video_dir)
+  logging.info("Running tracking on %d videos matching %s", len(video_file), video_file)
 
   gpu_options = tf.GPUOptions(allow_growth=True)
   sess_config = tf.ConfigProto(gpu_options=gpu_options)
@@ -50,15 +52,15 @@ def main(checkpoint, video_dir):
 
     tracker = Tracker(model, model_config=model_config, track_config=track_config)
 
-    if not osp.isdir(video_dir):
-      logging.warning('{} is not a directory, skipping...'.format(video_dir))
+    if not osp.isdir(video_file):
+      logging.warning('{} is not a directory, skipping...'.format(video_file))
 
-    video_name = osp.basename(video_dir)
+    video_name = osp.basename(video_file)
     video_log_dir = osp.join(track_config['log_dir'], video_name)
     mkdir_p(video_log_dir)
 
-    filenames = sort_nicely(glob(video_dir + '/img/*.jpg'))
-    first_line = open(video_dir + '/groundtruth_rect.txt').readline()
+    filenames = sort_nicely(glob(video_file + '/img/*.jpg'))
+    first_line = open(video_file + '/first_frame_rect.txt').readline()
     bb = [int(v) for v in first_line.strip().split(',')]
     init_bb = Rectangle(bb[0] - 1, bb[1] - 1, bb[2], bb[3])  # 0-index in python
     matting_method = track_config['matting']
@@ -72,8 +74,8 @@ def main(checkpoint, video_dir):
 
   if track_config['visualization']:
     logging.info("Viewing visualization results in a new window.")
-    visualization(VIDEO_DIR, video_log_dir)
+    visualization(video_file, video_log_dir)
 
 
 if __name__ == '__main__':
-  sys.exit(main(CHECKPOINT, VIDEO_DIR))
+  sys.exit(main(CHECKPOINT, VIDEO_FILE))
