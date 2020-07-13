@@ -2,7 +2,7 @@ import os.path as osp
 
 CURRENT_DIR = osp.dirname(__file__)
 LOG_DIR = CURRENT_DIR + '\Logs'  # where checkpoints, logs are saved
-RUN_NAME = 'SiamFC-3s-color-pretrained'  # identifier of the experiment
+RUN_NAME = 'imgsiam2'  # identifier of the experiment
 
 MODEL_CONFIG = {
   'z_image_size': 127,  # Exemplar image size

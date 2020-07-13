@@ -1,0 +1,1 @@
+jpg format video sequence is placed here
