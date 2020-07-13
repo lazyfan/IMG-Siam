@@ -65,12 +65,14 @@ class Tracker(object):
     # Run tracking loop
     reported_bboxs = []
     start_time = time.time()
+    duration = 0.01
     logging.info('Tracking...')
     for i, filename in enumerate(frames):
       if i > 0 or include_first:  # We don't really want to process the first image unless intended to do so.
         bbox_feed = [current_target_state.bbox.y, current_target_state.bbox.x,
                      current_target_state.bbox.height, current_target_state.bbox.width]
         input_feed = [filename, bbox_feed]
+        t0 = time.time()
         outputs, metadata = self.siamese_model.inference_step(sess, input_feed)
         search_scale_list = outputs['scale_xs']
         response = outputs['response']
@@ -166,8 +168,23 @@ class Tracker(object):
           np.save(osp.join(logdir, 'bbox{}.npy'.format(i)),
                   [bbox_search.x, bbox_search.y, bbox_search.width, bbox_search.height])
 
+        t1 = time.time()
+        duration = 0.8 * duration + 0.2 * (t1 - t0)
+
       reported_bbox = convert_bbox_format(current_target_state.bbox, 'top-left-based')
       reported_bboxs.append(reported_bbox)
+
+      # frame = cv2.imread(filename)
+      # cv2.rectangle(frame, (int(reported_bbox.x+1), int(reported_bbox.y+1)),
+      #               (int(reported_bbox.width) + int(reported_bbox.x+1), int(reported_bbox.height) + int(reported_bbox.y+1)),
+      #               (0, 255, 255), 1)
+      #
+      # cv2.putText(frame, 'FPS: ' + str(1 / duration)[:4].strip('.'), (8, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.6,
+      #             (0, 0, 255), 2)
+      # cv2.namedWindow("tracking result")
+      # cv2.imshow("tracking result", frame)
+      # cv2.waitKey(30)
+
     end_time = time.time()
     logging.info('The video has {} frames, tracking time is {:.2f}, total time is {:.2f}'.format(len(frames),
                                                                                             end_time-initial_time,
